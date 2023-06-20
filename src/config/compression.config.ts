@@ -3,6 +3,6 @@ import * as compression from 'compression';
 
 export const configureCompression = (app: INestApplication) => {
   app.use(compression());
-  Logger.log('Compression initialized', 'ConfigCompression');
+  Logger.log('Compression initialized', 'Config');
   return app;
 };

@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Bank, BankDocument } from '@zen/banks-datastore';
 import { Model } from 'mongoose';
 import {
   GetBankByIdRepository,
@@ -14,6 +13,8 @@ import {
   QueryBanksOutput,
   SyncBanksRepositoryInput,
 } from '../../application/models';
+import { Bank as BankModel } from '../../domain';
+import { Bank, BankDocument } from '../../providers';
 
 @Injectable()
 export class BanksRepository
@@ -56,11 +57,6 @@ export class BanksRepository
   }
 
   private map({ id, name, compe, ispb }: BankDocument) {
-    return {
-      id,
-      name,
-      compe: compe?.toUpperCase() === 'N/A' ? null : compe,
-      ispb,
-    };
+    return new BankModel(id, name, compe, ispb);
   }
 }

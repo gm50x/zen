@@ -56,6 +56,6 @@ export const configureLogger = (app: INestApplication) => {
 
   const logger = WinstonModule.createLogger(loggerConfig);
   app.useLogger(logger);
-  Logger.log('Logger initialized', 'ConfigLogger');
+  Logger.log('Logger initialized', 'Config');
   return app;
 };
