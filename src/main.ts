@@ -6,11 +6,13 @@ import {
   configureLogger,
   configureServerSecurity,
 } from './config';
+import { configureCompression } from './config/compression.config';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bufferLogs: true })
     .then(configureLogger)
     .then(configureServerSecurity)
+    .then(configureCompression)
     .then(configureCORS);
 
   const config = app.get(ConfigService);
