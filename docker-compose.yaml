@@ -1,0 +1,22 @@
+version: '3'
+
+networks:
+  skynet:
+    name: zen-skynet
+    driver: bridge
+
+volumes:
+  zen-mongodata:
+    name: 'zen-mongodata'
+
+services:
+  monguito:
+    image: mongo:6
+    container_name: monguito
+    environment:
+      MONGO_INITDB_DATABASE: ${DB_NAME:-monguito}
+      MONGO_INITDB_ROOT_USERNAME: ${DB_USER:-monguito}
+      MONGO_INITDB_ROOT_PASSWORD: ${DB_PASS:-monguito}
+    ports: [ "27017:27017" ]
+    volumes: [ 'zen-mongodata:/data/db' ]
+    networks: [ skynet ]
