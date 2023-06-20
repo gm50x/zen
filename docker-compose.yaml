@@ -20,3 +20,17 @@ services:
     ports: [ "27017:27017" ]
     volumes: [ 'zen-mongodata:/data/db' ]
     networks: [ skynet ]
+
+  banks-api:
+    build:
+      context: .
+    image: zen/banks-api
+    container_name: zen-banks-api
+    env_file: [ .env ]
+    ports:
+      - 30000:3000
+      - 30001:9229
+    command: 'sh -c "npm i && npm run start:debug"'
+    volumes: [ '.:/app', '/app/node_modules' ]
+    networks: [ skynet ]
+    depends_on: [ monguito ]
