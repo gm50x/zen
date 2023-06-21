@@ -68,3 +68,18 @@ These are IO drivers, they are the very first layer of defence between our syste
 ## Config
 
 Central to the service itself, these provide any sort of configuration that's needed. It's **no man's land**, everything is allowed here.
+
+## Rule of Dependency
+Core:
+  Domain -> {Domain}
+  Application -> {Application|Domain}
+
+ACL:
+  Adapters -> {Adapters|Application|Domain}
+
+Infra: 
+  Presentation -> {Presentation|Application}
+  Providers -> {Providers|SDKs|Clients}
+
+Service
+  Config -> {Config|Libs}
