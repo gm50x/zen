@@ -38,6 +38,8 @@ $ docker compose down -v
 - [ ] Abstract away the usage of transactions
 - [ ] Add logging
 - [ ] Add authentication
+- [ ] Add unit tests
+- [ ] Add e2e tests
 
 # Layers:
 
