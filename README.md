@@ -36,6 +36,7 @@ $ docker compose down -v
 ## TODOs:
 
 - [ ] Abstract away the usage of transactions
+- [ ] Add logging
 - [ ] Add authentication
 
 # Layers:
