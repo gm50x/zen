@@ -1,12 +1,13 @@
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
-import { AppModule } from './app.module';
+
 import {
   configureCORS,
   configureCompression,
   configureLogger,
   configureServerSecurity,
-} from './infra/config';
+} from '@infra/config';
+import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bufferLogs: true })

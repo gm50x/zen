@@ -1,4 +1,4 @@
-import { Bank } from '../domain';
+import { Bank } from '@core/domain';
 
 export interface BanksProvider {
   getAll(): Promise<Omit<Bank, 'id'>[]>;

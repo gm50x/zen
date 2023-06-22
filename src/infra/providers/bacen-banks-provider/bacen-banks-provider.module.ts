@@ -1,5 +1,6 @@
 import { HttpModule } from '@nestjs/axios';
 import { Module } from '@nestjs/common';
+
 import { BacenBanksProviderService } from './bacen-banks-provider.service';
 
 @Module({

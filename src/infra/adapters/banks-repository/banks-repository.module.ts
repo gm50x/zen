@@ -1,10 +1,11 @@
 import { Module } from '@nestjs/common';
+
 import {
   GetBankByIdRepository,
   QueryBanksRepository,
   SyncBanksRepository,
-} from '../../../core/abstractions';
-import { BanksDatastoreModule } from '../../providers';
+} from '@core/abstractions';
+import { BanksDatastoreModule } from '@infra/providers';
 import { BanksRepository } from './banks.repository';
 
 @Module({

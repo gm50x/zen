@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
+
 import { Bank, BankSchema } from './banks-datastore.schema';
 
 @Module({})

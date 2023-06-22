@@ -1,5 +1,6 @@
 import { Controller, Get, Query } from '@nestjs/common';
-import { QueryBanks } from '../../../core/application';
+
+import { QueryBanks } from '@core/application';
 
 @Controller('banks')
 export class QueryBanksController {

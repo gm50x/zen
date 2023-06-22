@@ -1,9 +1,10 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
+
 import {
   BanksProvider,
   SyncBanksRepository,
   TransactionManager,
-} from '../abstractions';
+} from '@core/abstractions';
 import { SyncBanksInput, SyncBanksOutput } from '../models';
 import { UseCase } from './usecase';
 

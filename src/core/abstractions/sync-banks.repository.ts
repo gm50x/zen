@@ -1,4 +1,4 @@
-import { SyncBanksRepositoryInput } from '../models';
+import { SyncBanksRepositoryInput } from '@core/models';
 import { Transaction } from './transaction.manager';
 
 export abstract class SyncBanksRepository /* NOSONAR */ {}

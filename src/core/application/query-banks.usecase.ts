@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { QueryBanksRepository } from '../abstractions';
-import { QueryBanksInput, QueryBanksOutput } from '../models';
+
+import { QueryBanksRepository } from '@core/abstractions';
+import { QueryBanksInput, QueryBanksOutput } from '@core/models';
 import { UseCase } from './usecase';
 
 @Injectable()

@@ -1,4 +1,4 @@
-import { GetBankByIdInput, GetBankByIdOutput } from '../models';
+import { GetBankByIdInput, GetBankByIdOutput } from '@core/models';
 
 export interface GetBankByIdRepository {
   getById(input: GetBankByIdInput): Promise<GetBankByIdOutput>;

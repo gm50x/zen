@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
-import { BanksRepositoryModule } from '../../infra/adapters';
+
+import { BanksRepositoryModule } from '@infra/adapters';
 import { QueryBanks } from './query-banks.usecase';
 
 @Module({

@@ -1,5 +1,5 @@
+import { TransactionManager } from '@core/abstractions';
 import { Module } from '@nestjs/common';
-import { TransactionManager } from '../../../core/abstractions';
 import { MongooseTransactionManager } from './mongoose-transaction.manager';
 
 @Module({

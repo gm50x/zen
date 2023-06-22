@@ -1,7 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { BanksProvider } from '../../../core/abstractions';
-import { Bank } from '../../../core/domain';
-import { BacenBanksProviderService } from '../../providers';
+
+import { BanksProvider } from '@core/abstractions';
+import { Bank } from '@core/domain';
+import { BacenBanksProviderService } from '@infra/providers';
 
 @Injectable()
 export class BacenBanksAdapter implements BanksProvider {

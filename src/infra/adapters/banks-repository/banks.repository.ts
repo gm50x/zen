@@ -1,22 +1,23 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
+
 import {
   GetBankByIdRepository,
   QueryBanksRepository,
   SyncBanksRepository,
   Transaction,
-} from '../../../core/abstractions';
-import { Bank as BankModel } from '../../../core/domain';
+} from '@core/abstractions';
+import { Bank as BankModel } from '@core/domain';
 import {
   GetBankByIdInput,
   GetBankByIdOutput,
   QueryBanksInput,
   QueryBanksOutput,
   SyncBanksRepositoryInput,
-} from '../../../core/models';
-import { Bank, BankDocument } from '../../providers';
-import { MongooseTransaction } from '../mongoose-transaction-manager';
+} from '@core/models';
+import { MongooseTransaction } from '@infra/adapters';
+import { Bank, BankDocument } from '@infra/providers';
 
 @Injectable()
 export class BanksRepository
