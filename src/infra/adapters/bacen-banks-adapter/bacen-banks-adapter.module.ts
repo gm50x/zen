@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { BanksProvider } from '../../core/abstractions';
+import { BanksProvider } from '../../../core/abstractions';
 import { BacenBanksProviderModule } from '../../providers';
 import { BacenBanksAdapter } from './bacen-banks.adapter';
 

@@ -6,15 +6,15 @@ import {
   QueryBanksRepository,
   SyncBanksRepository,
   Transaction,
-} from '../../core/abstractions';
-import { Bank as BankModel } from '../../core/domain';
+} from '../../../core/abstractions';
+import { Bank as BankModel } from '../../../core/domain';
 import {
   GetBankByIdInput,
   GetBankByIdOutput,
   QueryBanksInput,
   QueryBanksOutput,
   SyncBanksRepositoryInput,
-} from '../../core/models';
+} from '../../../core/models';
 import { Bank, BankDocument } from '../../providers';
 import { MongooseTransaction } from '../mongoose-transaction-manager';
 

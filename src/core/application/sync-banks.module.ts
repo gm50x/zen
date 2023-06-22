@@ -3,7 +3,7 @@ import {
   BacenBanksAdapterModule,
   BanksRepositoryModule,
   MongooseTransactionManagerModule,
-} from '../../adapters';
+} from '../../infra/adapters';
 import { SyncBanks } from './sync-banks.usecase';
 
 @Module({

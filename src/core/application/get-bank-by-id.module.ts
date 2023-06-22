@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { BanksRepositoryModule } from '../../adapters';
+import { BanksRepositoryModule } from '../../infra/adapters';
 import { GetBankById } from './get-bank-by-id.usecase';
 
 @Module({

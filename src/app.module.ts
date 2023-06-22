@@ -1,16 +1,16 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
-import { MongoConfig, TracingModule } from './config';
 import {
   GetBankByIdModule,
   QueryBanksModule,
   SyncBanksModule,
 } from './core/application';
+import { MongoConfig, TracingModule } from './infra/config';
 import {
   GetBankByIdController,
   QueryBanksController,
-} from './presentation/controllers';
+} from './infra/presentation/controllers';
 
 @Module({
   imports: [
