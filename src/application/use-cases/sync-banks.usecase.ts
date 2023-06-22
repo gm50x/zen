@@ -1,5 +1,10 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
-import { BanksProvider, SyncBanksRepository, UseCase } from '../abstractions';
+import {
+  BanksProvider,
+  SyncBanksRepository,
+  TransactionManager,
+  UseCase,
+} from '../abstractions';
 import { SyncBanksInput, SyncBanksOutput } from '../models';
 
 @Injectable()
@@ -9,6 +14,7 @@ export class SyncBanks
   constructor(
     private readonly repository: SyncBanksRepository,
     private readonly banksProvider: BanksProvider,
+    private readonly transactionManager: TransactionManager,
   ) {}
 
   async onModuleInit() {
@@ -16,16 +22,14 @@ export class SyncBanks
   }
 
   async execute(): Promise<SyncBanksOutput> {
-    /**
-     * TODO:
-     * When we have a transaction running, we can perform both getAll and deleteAll in parallel, gaining performance. If any fails the transactions gets rolled back;
-     */
+    const transaction = await this.transactionManager.createTransaction();
     const banks = await this.banksProvider.getAll();
-    /**
-     * TODO:
-     * add transaction to only commit if we are successful
-     */
-    await this.repository.deleteAll();
-    await this.repository.createMany(banks);
+    try {
+      await this.repository.deleteAll(transaction);
+      await this.repository.createMany(banks, transaction);
+      await transaction.commit();
+    } catch (err) {
+      await transaction.rollback();
+    }
   }
 }

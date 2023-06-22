@@ -5,6 +5,7 @@ import {
   GetBankByIdRepository,
   QueryBanksRepository,
   SyncBanksRepository,
+  Transaction,
 } from '../../application/abstractions';
 import {
   GetBankByIdInput,
@@ -15,6 +16,7 @@ import {
 } from '../../application/models';
 import { Bank as BankModel } from '../../domain';
 import { Bank, BankDocument } from '../../providers';
+import { MongooseTransaction } from '../mongoose-transaction-manager';
 
 @Injectable()
 export class BanksRepository
@@ -24,12 +26,36 @@ export class BanksRepository
     @InjectModel(Bank.name) private readonly dataAccess: Model<BankDocument>,
   ) {}
 
-  async createMany(data: SyncBanksRepositoryInput): Promise<void> {
-    await this.dataAccess.create(data);
+  private assertMongooseTransaction(
+    transaction: Transaction,
+  ): asserts transaction is MongooseTransaction {
+    if (transaction.constructor.name !== MongooseTransaction.name) {
+      throw new Error(
+        'InvalidArguments: Provided Transaction is not a valid MongooseTransaction',
+      );
+    }
   }
 
-  async deleteAll(): Promise<void> {
-    await this.dataAccess.deleteMany().exec();
+  private getSessionFromTransaction(transaction: Transaction) {
+    if (!transaction) {
+      return;
+    }
+
+    this.assertMongooseTransaction(transaction);
+    return transaction.session;
+  }
+
+  async createMany(
+    data: SyncBanksRepositoryInput,
+    transaction?: Transaction,
+  ): Promise<void> {
+    const session = this.getSessionFromTransaction(transaction);
+    await this.dataAccess.create(data, { session });
+  }
+
+  async deleteAll(transaction?: Transaction): Promise<void> {
+    const session = this.getSessionFromTransaction(transaction);
+    await this.dataAccess.deleteMany(null, { session }).exec();
   }
 
   async getById(input: GetBankByIdInput): Promise<GetBankByIdOutput> {

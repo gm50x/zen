@@ -13,14 +13,27 @@ services:
   monguito:
     image: mongo:6
     container_name: monguito
-    environment:
-      MONGO_INITDB_DATABASE: ${DB_NAME:-monguito}
-      MONGO_INITDB_ROOT_USERNAME: ${DB_USER:-monguito}
-      MONGO_INITDB_ROOT_PASSWORD: ${DB_PASS:-monguito}
-    ports: [ "27017:27017" ]
+    command: 'mongod --replSet rs0 --bind_ip_all'
+    ports: [ '27017:27017' ]
     volumes: [ 'zen-mongodata:/data/db' ]
     networks: [ skynet ]
-
+  monguito_init:
+    # this contianer will exit once the replica set is initiated
+    image: mongo:6
+    container_name: monguito_init
+    restart: 'no'
+    depends_on: [ monguito ]
+    networks: [ skynet ]
+    command: >-
+      mongosh --host host.docker.internal:27017 --eval 'rs.initiate({
+        "_id": "rs0",
+        "members": [
+          {
+            "_id":0,
+            "host": "host.docker.internal:27017"
+          }
+        ]
+      });'
   banks-api:
     build:
       context: .
