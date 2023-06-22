@@ -3,7 +3,7 @@ import {
   GetBankByIdRepository,
   QueryBanksRepository,
   SyncBanksRepository,
-} from '../../application/abstractions';
+} from '../../core/application/abstractions';
 import { BanksDatastoreModule } from '../../providers';
 import { BanksRepository } from './banks.repository';
 

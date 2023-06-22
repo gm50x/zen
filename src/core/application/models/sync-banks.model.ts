@@ -1,4 +1,4 @@
-import { Bank } from '../../domain/models/bank.model';
+import { Bank } from '../../../core/domain';
 
 export type SyncBanksInput = void /* NOSONAR */;
 export type SyncBanksOutput = void; /* NOSONAR */

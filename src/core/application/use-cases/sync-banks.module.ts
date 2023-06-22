@@ -1,6 +1,9 @@
 import { Module } from '@nestjs/common';
-import { BacenBanksAdapterModule, BanksRepositoryModule } from '../../adapters';
-import { MongooseTransactionManagerModule } from '../../adapters/mongoose-transaction-manager';
+import {
+  BacenBanksAdapterModule,
+  BanksRepositoryModule,
+  MongooseTransactionManagerModule,
+} from '../../../adapters';
 import { SyncBanks } from './sync-banks.usecase';
 
 @Module({

@@ -1,5 +1,5 @@
 import { Controller, Get, Query } from '@nestjs/common';
-import { QueryBanks } from '../../application/use-cases';
+import { QueryBanks } from '../../core/application/use-cases';
 
 @Controller('banks')
 export class QueryBanksController {

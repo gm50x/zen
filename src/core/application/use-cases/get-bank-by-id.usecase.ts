@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Bank } from '../../domain';
+import { Bank } from '../../../core/domain';
 import { GetBankByIdRepository, UseCase } from '../abstractions';
 import { GetBankByIdInput, GetBankByIdOutput } from '../models';
 

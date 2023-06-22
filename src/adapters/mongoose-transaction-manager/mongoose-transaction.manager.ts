@@ -4,7 +4,7 @@ import { Connection } from 'mongoose';
 import {
   Transaction,
   TransactionManager,
-} from '../../application/abstractions';
+} from '../../core/application/abstractions';
 import { MongooseTransaction } from './models';
 
 @Injectable()
