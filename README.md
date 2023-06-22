@@ -35,7 +35,6 @@ $ docker compose down -v
 
 ## TODOs:
 
-- [ ] Abstract away the usage of transactions
 - [ ] Add logging
 - [ ] Add authentication
 - [ ] Add unit tests
@@ -70,16 +69,13 @@ These are IO drivers, they are the very first layer of defence between our syste
 Central to the service itself, these provide any sort of configuration that's needed. It's **no man's land**, everything is allowed here.
 
 ## Rule of Dependency
-Core:
-  Domain -> {Domain}
-  Application -> {Application|Domain}
 
-ACL:
-  Adapters -> {Adapters|Application|Domain}
+    Core: (Can only depend on the artifacts within core)
+      Domain -> {Domain} `domain is the most internal, depends only on itself`
+      Application -> {Application|Domain|Abstractions} `Business orchestrator`
 
-Infra: 
-  Presentation -> {Presentation|Application}
-  Providers -> {Providers|SDKs|Clients}
-
-Service
-  Config -> {Config|Libs}
+    Infra:
+      Adapters(ACL) -> {Adapters|Application|Domain|Abstractions} `ensures external providers respect domain contracts`
+      Presentation -> {Presentation|Application|Abstractions} `exposes application to the world, inbound, entrypoints`
+      Providers -> {ExternalProviders|SDKs|Clients|etc.} `protect the system from the outbound world`
+      Config -> {Config|Libs|etc.} `any manner of configuration that's needed`
