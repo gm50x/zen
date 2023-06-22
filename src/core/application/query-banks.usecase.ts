@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { QueryBanksRepository, UseCase } from '../abstractions';
+import { QueryBanksRepository } from '../abstractions';
 import { QueryBanksInput, QueryBanksOutput } from '../models';
+import { UseCase } from './usecase';
 
 @Injectable()
 export class QueryBanks implements UseCase<QueryBanksInput, QueryBanksOutput> {

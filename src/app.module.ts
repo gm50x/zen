@@ -6,7 +6,7 @@ import {
   GetBankByIdModule,
   QueryBanksModule,
   SyncBanksModule,
-} from './core/application/use-cases';
+} from './core/application';
 import {
   GetBankByIdController,
   QueryBanksController,

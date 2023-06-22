@@ -1,5 +1,5 @@
 import { ClientSession } from 'mongoose';
-import { Transaction } from '../../../core/application/abstractions';
+import { Transaction } from '../../../core/abstractions';
 
 export class MongooseTransaction implements Transaction {
   constructor(private readonly clientSession: ClientSession) {}

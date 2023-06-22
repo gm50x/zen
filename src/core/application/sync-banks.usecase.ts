@@ -3,9 +3,9 @@ import {
   BanksProvider,
   SyncBanksRepository,
   TransactionManager,
-  UseCase,
 } from '../abstractions';
 import { SyncBanksInput, SyncBanksOutput } from '../models';
+import { UseCase } from './usecase';
 
 @Injectable()
 export class SyncBanks

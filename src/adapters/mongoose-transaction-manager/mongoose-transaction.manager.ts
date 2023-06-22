@@ -1,10 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectConnection } from '@nestjs/mongoose';
 import { Connection } from 'mongoose';
-import {
-  Transaction,
-  TransactionManager,
-} from '../../core/application/abstractions';
+import { Transaction, TransactionManager } from '../../core/abstractions';
 import { MongooseTransaction } from './models';
 
 @Injectable()

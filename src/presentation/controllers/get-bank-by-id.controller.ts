@@ -1,5 +1,5 @@
 import { Controller, Get, Param } from '@nestjs/common';
-import { GetBankById } from '../../core/application/use-cases';
+import { GetBankById } from '../../core/application';
 
 @Controller('banks/:id')
 export class GetBankByIdController {
