@@ -8,7 +8,6 @@ export class AmqpModule {
   static forRoot(options: AmqpModuleOptions): DynamicModule {
     return {
       module: AmqpModule,
-      global: true,
       providers: [
         { provide: 'AmqpExchangeOptions', useValue: { url: options.url } },
         AmqpConnection,
@@ -24,7 +23,6 @@ export class AmqpModule {
     return {
       module: AmqpModule,
       imports,
-      global: true,
       providers: [
         { provide: 'AmqpExchangeOptions', inject, useFactory },
         AmqpConnection,
