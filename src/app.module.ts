@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 
 import {
@@ -11,17 +11,27 @@ import { MongoConfig, TracingModule } from '@infra/config';
 import {
   GetBankByIdController,
   QueryBanksController,
+  ZenSubscriptionController,
 } from '@infra/presentation/controllers';
+import { AmqpModule } from '@infra/providers/amqp';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     TracingModule.forHTTP(),
     MongooseModule.forRootAsync({ useClass: MongoConfig }),
+    AmqpModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({ url: config.get('AMQP_URL') }),
+    }),
     SyncBanksModule,
     QueryBanksModule,
     GetBankByIdModule,
   ],
-  controllers: [GetBankByIdController, QueryBanksController],
+  controllers: [
+    GetBankByIdController,
+    QueryBanksController,
+    ZenSubscriptionController,
+  ],
 })
 export class AppModule {}
