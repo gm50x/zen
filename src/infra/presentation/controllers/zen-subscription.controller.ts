@@ -4,20 +4,20 @@ import {
   AttemptCount,
   Headers,
   MessageHeaders,
-  SubscribePattern,
+  Subscribe,
 } from '@infra/providers/amqp';
 import { Controller } from '@nestjs/common';
 import { Payload } from '@nestjs/microservices';
 
 @Controller()
 export class ZenSubscriptionController {
-  @SubscribePattern('foo.bar', ZenConsumer)
+  @Subscribe('foo.bar', ZenConsumer)
   async getById(
     @Payload() data: any,
     @Headers() headers: MessageHeaders,
     @AttemptCount() attemptCount: number,
   ) {
-    if (data.fail > attemptCount) {
+    if (data.fail >= attemptCount) {
       console.log('throwing...', { attemptCount });
       throw new AmqpException(
         'Required fail greater than current attempt count',

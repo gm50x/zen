@@ -65,8 +65,8 @@ export const AttemptCount = createParamDecorator(
  * async handle(@Headers('foo') foo: string) {}
  * ```
  *
- * @param pattern the pattern you want to subscribe with (routingKey)
+ * @param routingKey the pattern you want to subscribe with (routingKey)
  * @param consumerId consumer to subscribe this handler with (if you have multiple)
  */
-export const SubscribePattern = (pattern: string, consumerId?: symbol) =>
-  MessagePattern(pattern, consumerId);
+export const Subscribe = (routingKey: string, consumerId?: symbol) =>
+  MessagePattern(routingKey, consumerId);

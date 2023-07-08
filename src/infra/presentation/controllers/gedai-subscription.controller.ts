@@ -3,14 +3,14 @@ import {
   AttemptCount,
   Headers,
   MessageHeaders,
-  SubscribePattern,
+  Subscribe,
 } from '@infra/providers/amqp';
 import { Controller } from '@nestjs/common';
 import { Payload } from '@nestjs/microservices';
 
 @Controller()
 export class GedaiSubscriptionController {
-  @SubscribePattern('foo.bar', GedaiConsumer)
+  @Subscribe('foo.bar', GedaiConsumer)
   async getById(
     @Payload() data: any,
     @Headers() headers: MessageHeaders,
