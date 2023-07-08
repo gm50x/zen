@@ -1,18 +1,35 @@
+import { Message } from '@infra/providers/amqp';
 import { randomUUID } from 'crypto';
-import { Request } from 'express';
 import { ClsModule } from 'nestjs-cls';
 
 export class TracingModule {
-  static forHTTP() {
+  static forRoot() {
     return ClsModule.forRoot({
       global: true,
-      middleware: {
+      guard: {
         mount: true,
         generateId: true,
-        idGenerator: (req: Request) =>
-          req.headers['x-trace-id'] ||
-          req.body?.attributes?.traceId ||
-          randomUUID(),
+        idGenerator: (context) => {
+          const contextType = context.getType();
+          let traceId = randomUUID();
+          switch (contextType) {
+            case 'http':
+              const request = context.switchToHttp().getRequest();
+              traceId =
+                request.headers['x-trace-id'] ||
+                request.body?.attributes?.traceId ||
+                traceId;
+              return traceId;
+            case 'rpc':
+              /** @LIMITATION currently working with amqp only */
+              const rawMessage = context.switchToRpc().getContext<Message>();
+              traceId =
+                rawMessage.properties.headers['x-trace-id'] || randomUUID();
+              rawMessage.properties.headers['x-trace-id'] = traceId;
+
+              return traceId;
+          }
+        },
       },
     });
   }

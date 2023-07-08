@@ -6,11 +6,15 @@ import {
   MessageHeaders,
   Subscribe,
 } from '@infra/providers/amqp';
-import { Controller } from '@nestjs/common';
+import { Controller, Logger, UseGuards } from '@nestjs/common';
 import { Payload } from '@nestjs/microservices';
+import { ClsGuard } from 'nestjs-cls';
 
 @Controller()
+@UseGuards(ClsGuard)
 export class ZenSubscriptionController {
+  private readonly logger = new Logger(this.constructor.name);
+
   @Subscribe('foo.bar', ZenConsumer)
   async getById(
     @Payload() data: any,
@@ -18,12 +22,18 @@ export class ZenSubscriptionController {
     @AttemptCount() attemptCount: number,
   ) {
     if (data.fail >= attemptCount) {
-      console.log('throwing...', { attemptCount });
+      this.logger.log({ message: 'throwing', attemptCount });
+
       throw new AmqpException(
         'Required fail greater than current attempt count',
       );
     }
 
-    console.log('success', { data, attemptCount, headers });
+    this.logger.log({
+      message: 'Completing message handling',
+      data,
+      attemptCount,
+      headers,
+    });
   }
 }

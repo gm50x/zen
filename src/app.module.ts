@@ -19,7 +19,7 @@ import { AmqpModule } from '@infra/providers/amqp';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
-    TracingModule.forHTTP(),
+    TracingModule.forRoot(),
     MongooseModule.forRootAsync({ useClass: MongoConfig }),
     AmqpModule.forRootAsync({
       inject: [ConfigService],
