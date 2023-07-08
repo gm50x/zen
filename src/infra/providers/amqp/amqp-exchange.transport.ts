@@ -1,5 +1,9 @@
 import { Logger } from '@nestjs/common';
-import { CustomTransportStrategy, Server } from '@nestjs/microservices';
+import {
+  CustomTransportStrategy,
+  MessageHandler,
+  Server,
+} from '@nestjs/microservices';
 import { ChannelWrapper } from 'amqp-connection-manager';
 import { Channel, ConsumeMessage } from 'amqplib';
 import { isObservable, lastValueFrom } from 'rxjs';
@@ -21,6 +25,7 @@ export class AmqpExchangeTransport
   private readonly exchange: AmqpExchange;
   private connection: AmqpConnection;
   private channel: ChannelWrapper;
+  private routingKeys: { routingKey: string; regex: RegExp }[];
 
   constructor(private readonly options: AmqpExchangeTransportOptions) {
     super();
@@ -78,6 +83,15 @@ export class AmqpExchangeTransport
     await channel.assertQueue(dead);
   }
 
+  private getRoutingKeyRegex(routingKey: string) {
+    const bindingKey = routingKey
+      .replaceAll('.', '\\.')
+      .replaceAll('*', '[a-zA-Z0-9-]+')
+      .replaceAll('#', '.+');
+
+    return new RegExp(`^${bindingKey}$`);
+  }
+
   private async bindQueues(channel: Channel) {
     const { name: exchange, main, retry } = this.exchange;
 
@@ -88,7 +102,10 @@ export class AmqpExchangeTransport
   private async bindRoutingKeys(channel: Channel) {
     const routingKeys = Array.from(this.messageHandlers.keys());
 
-    /** TODO: allow regex patterns like foo.* and foo.bar */
+    this.routingKeys = routingKeys.map((x) => ({
+      routingKey: x,
+      regex: this.getRoutingKeyRegex(x),
+    }));
 
     await Promise.all(
       routingKeys.map((key) =>
@@ -152,16 +169,20 @@ export class AmqpExchangeTransport
     return maxInterval && expiration > maxInterval ? maxInterval : expiration;
   }
 
+  private getHandlerByRoutingKey(
+    routingKey: string,
+  ): MessageHandler<any, any, any> {
+    const handler = this.routingKeys.find((x) => x.regex.test(routingKey));
+    return this.getHandlerByPattern(handler.routingKey);
+  }
+
   private async onMessage(message: ConsumeMessage) {
     const routingKey =
       message.properties.headers['x-original-routing-key'] ||
       message.fields.routingKey;
 
-    /** TODO: we should use a regex handling here to allow 'foo.*' types of routes */
-    /** TODO: we might want to trigger multiple handlers at a time */
-    /** TODO: we should subscribe before this method */
-    const handler = this.getHandlerByPattern(routingKey);
-
+    /** TODO: this should return multiple handler that need all be triggered */
+    const handler = this.getHandlerByRoutingKey(routingKey);
     if (!handler) {
       this.logger.warn(
         `No handler found for message with pattern ${routingKey}`,

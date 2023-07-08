@@ -15,8 +15,8 @@ import { ClsGuard } from 'nestjs-cls';
 export class ZenSubscriptionController {
   private readonly logger = new Logger(this.constructor.name);
 
-  @Subscribe('foo.bar', ZenConsumer)
-  async getById(
+  @Subscribe('foo.*.bin', ZenConsumer)
+  async fooSomeBin(
     @Payload() data: any,
     @Headers() headers: MessageHeaders,
     @AttemptCount() attemptCount: number,
@@ -30,7 +30,22 @@ export class ZenSubscriptionController {
     }
 
     this.logger.log({
-      message: 'Completing message handling',
+      message: 'Completing message handling, foo.*.bin',
+      data,
+      attemptCount,
+      headers,
+    });
+  }
+
+  /** THIS NEVER GETS SUBSCRIBED UNLESS IT'S PART OF ANOTHER CONSUMER, NOT YET REACTIVE */
+  @Subscribe('#.bin', ZenConsumer)
+  async allBin(
+    @Payload() data: any,
+    @Headers() headers: MessageHeaders,
+    @AttemptCount() attemptCount: number,
+  ) {
+    this.logger.log({
+      message: 'Completing message handling #.bin',
       data,
       attemptCount,
       headers,
