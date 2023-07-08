@@ -2,14 +2,37 @@ import { AmqpConnection, AmqpExchangeTransport } from '@infra/providers/amqp';
 import { INestApplication, Logger } from '@nestjs/common';
 import { MicroserviceOptions } from '@nestjs/microservices';
 
+export const ZenConsumer = Symbol.for('Zen');
 const zenMicroserviceConfig = (
   connection: AmqpConnection,
 ): MicroserviceOptions => ({
   strategy: new AmqpExchangeTransport({
+    consumerId: ZenConsumer,
     connection,
     exchange: {
       name: 'zen',
-      type: 'topic',
+    },
+    retry: {
+      maxInterval: 5000,
+      interval: 5000,
+      limit: 5,
+    },
+  }),
+});
+
+export const GedaiConsumer = Symbol.for('Gedai');
+const gedaiMicroserviceConfig = (
+  connection: AmqpConnection,
+): MicroserviceOptions => ({
+  strategy: new AmqpExchangeTransport({
+    consumerId: GedaiConsumer,
+    connection,
+    exchange: {
+      name: 'gedai',
+      bindToExchange: {
+        name: 'zen',
+        routingKey: 'foo.*',
+      },
     },
     retry: {
       maxInterval: 5000,
@@ -25,6 +48,10 @@ export const configureMicroservices = (app: INestApplication) => {
 
   app.connectMicroservice<MicroserviceOptions>(
     zenMicroserviceConfig(connection),
+  );
+
+  app.connectMicroservice<MicroserviceOptions>(
+    gedaiMicroserviceConfig(connection),
   );
 
   return app;

@@ -1,3 +1,4 @@
+import { ZenConsumer } from '@infra/config';
 import {
   AmqpException,
   AttemptCount,
@@ -10,7 +11,7 @@ import { Payload } from '@nestjs/microservices';
 
 @Controller()
 export class ZenSubscriptionController {
-  @SubscribePattern('foo.bar')
+  @SubscribePattern('foo.bar', ZenConsumer)
   async getById(
     @Payload() data: any,
     @Headers() headers: MessageHeaders,

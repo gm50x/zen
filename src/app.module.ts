@@ -9,6 +9,7 @@ import {
 } from '@core/application';
 import { MongoConfig, TracingModule } from '@infra/config';
 import {
+  GedaiSubscriptionController,
   GetBankByIdController,
   QueryBanksController,
   ZenSubscriptionController,
@@ -32,6 +33,7 @@ import { AmqpModule } from '@infra/providers/amqp';
     GetBankByIdController,
     QueryBanksController,
     ZenSubscriptionController,
+    GedaiSubscriptionController,
   ],
 })
 export class AppModule {}

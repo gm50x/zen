@@ -19,7 +19,10 @@ export interface AmqpModuleAsyncOptions
 export type AmqpExchangeType = 'direct' | 'topic';
 
 export class AmqpExchange {
-  constructor(readonly name: string, readonly type: AmqpExchangeType) {}
+  constructor(
+    readonly name: string,
+    readonly type: AmqpExchangeType = 'topic',
+  ) {}
 
   get main() {
     return `${this.name}.main`;
@@ -36,7 +39,11 @@ export class AmqpExchange {
 
 export type AmqpExchangeOption = {
   name: string;
-  type: AmqpExchangeType;
+  type?: AmqpExchangeType;
+  bindToExchange?: {
+    name: string;
+    routingKey: string;
+  };
 };
 
 export type AmqpRetryOptions = {

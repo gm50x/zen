@@ -41,9 +41,11 @@ export class AmqpExchangeTransport
   async listen(callback: () => void) {
     this.connect();
 
-    /** TODO: bring subscription up here to allow multiple trigger with single subscription per key */
-    // const subscriptions = Array.from(this.messageHandlers.keys());
-    // console.log(subscriptions);
+    /**
+     * @TODO: trigger multiple subscription endpoints on the same microservice.
+     * For example the same microservice config should be able to handle
+     * both foo.bar handle and foo.*.
+     */
 
     this.channel.consume(this.exchange.main, this.onMessage.bind(this), {
       noAck: true,
@@ -86,10 +88,25 @@ export class AmqpExchangeTransport
   private async bindRoutingKeys(channel: Channel) {
     const routingKeys = Array.from(this.messageHandlers.keys());
 
+    /** TODO: allow regex patterns like foo.* and foo.bar */
+
     await Promise.all(
       routingKeys.map((key) =>
         channel.bindQueue(this.exchange.main, this.exchange.name, key),
       ),
+    );
+  }
+
+  private async bindExchanges(channel: Channel) {
+    const exchangeToBind = this.options.exchange.bindToExchange;
+    if (!exchangeToBind) {
+      return;
+    }
+
+    await channel.bindExchange(
+      this.exchange.name,
+      exchangeToBind.name,
+      exchangeToBind.routingKey,
     );
   }
 
@@ -98,6 +115,7 @@ export class AmqpExchangeTransport
     await this.assertQueues(channel);
     await this.bindQueues(channel);
     await this.bindRoutingKeys(channel);
+    await this.bindExchanges(channel);
   }
 
   private connect() {
@@ -162,6 +180,19 @@ export class AmqpExchangeTransport
   }
 
   private async onMessageError(message: ConsumeMessage) {
+    /** TODO: Allow retrying unique handlers:
+     * If we have two subscriptions on the same microservice
+     * that get triggered by the same message we should be able to
+     * retry each handler independendly of each other.
+     * For example:
+     * ```typescript
+     *  @SubscribePattern('foo.bar') fooBarHandler() {}
+     *  @SubscribePattern('foo.*') fooAnyHandler() {}
+     * ```
+     * We then would want to be able to retry `foo.bar` independently
+     * from `foo.*`. The current setup only allows this through the use
+     * of multiple exchanges and therefore subscriptions...
+     */
     const { limit = 10 } = this.options.retry;
     const totalAttempts =
       message.properties.headers[ControlHeaders.AttemptCount] || 1;
