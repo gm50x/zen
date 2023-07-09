@@ -16,63 +16,74 @@ Overall, the AMQP Exchanges module for NestJS empowers your application with adv
 
 # Before we start
 
-A few guidelines should be considered.
+When working with RabbitMQ, you have the ability to route your messages using wildcards: the multiword wildcard (#) and the singleword wildcard (\*). These wildcards allow you to define flexible patterns for routing keys and match them to the appropriate message handlers. Let's take a look at some examples to help you understand the routing capabilities:
 
-In RabbitMQ you can route your messages using the multiword(`#`) or the singleword(`*`) wildcards. For example, a message with a routing key of `foo.bar.bin` will be routed to a handler registered with `foo.*.bin`, as well as a handler registered with `#.bin`. A few matching examples should help understanding the routing capabilities:
+| Message Routing Key | Registered Handler | Description                                                                                                                                                                                                                |
+| ------------------- | ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `foo.bar.bin.baz`   | `foo.bar.bin.baz`  | This is a direct binding where the routing key matches the registered handler exactly.                                                                                                                                     |
+| `foo.bar.bin.baz`   | `*.bar.bin.baz`    | This example uses a single word wildcard. The routing key can have any single word before .bar.bin.baz, allowing it to be routed to a handler registered with any word in that position                                    |
+| `foo.bar.bin.baz`   | `foo.*.*.baz`      | Another single word wildcard example. The routing key can have any word in the second and third position before .baz, making it compatible with a registered handler that has any combination of words in those positions. |
+| `foo.bar.bin.baz`   | `foo.#.baz`        | This is an example of a multiword wildcard. The routing key can have any number of words before .baz, making it suitable for a handler registered with any combination of words or no words at all.                        |
+| `foo.bar.bin.baz`   | `#.bin.baz`        | Here's another multiword wildcard example. The routing key can have any number of words before .bin.baz, allowing it to be handled by a registered handler with any combination of words preceding .bin.baz.               |
+| `foo.bar.bin.baz`   | `#.baz`            | This multiword wildcard allows the routing key to have any number of words before .baz, making it compatible with a handler registered with any combination of words or no words at all.                                   |
+| `foo.bar.bin.baz`   | `#`                | Finally, we have the most generic wildcard, which matches any routing key. This means it can be used to handle messages with any routing key, regardless of the structure or words it contains.                            |
 
-| Message Routing Key | Registered Handler | Description          |
-| ------------------- | ------------------ | -------------------- |
-| `foo.bar.bin.baz`   | `foo.bar.bin.baz`  | Direct binding       |
-| `foo.bar.bin.baz`   | `*.bar.bin.baz`    | Single word wildcard |
-| `foo.bar.bin.baz`   | `foo.*.*.baz`      | Single word wildcard |
-| `foo.bar.bin.baz`   | `foo.#.baz`        | Multi word wildcard  |
-| `foo.bar.bin.baz`   | `#.bin.baz`        | Multi word wildcard  |
-| `foo.bar.bin.baz`   | `#.baz`            | Multi word wildcard  |
-| `foo.bar.bin.baz`   | `#`                | Anything wildcard    |
+By using these wildcards, you can define various routing patterns in RabbitMQ, allowing for flexible message routing and efficient handling based on your specific requirements.
 
 # Getting Started
 
 ## Install the required packages
 
+To begin, install the necessary packages by running the following command in your terminal:
+
 ```bash
-npm install @gedai/nestjs-amqp amqplib amqp-connection-manager
+npm install @gedai/nestjs-amqp amqplib amqp-connection-manager @nestjs/microservices
 ```
 
 ## Common setup
 
+Next, set up a controller to subscribe to messages. Here's an example of how you can define a subscription controller:
+
 ```typescript
-// Create a controller to subscribe to messages
+// Import the necessary decorators and classes
+import { Controller } from '@nestjs/common';
+import { Subscribe, Payload, Headers, AttemptCount } from '@gedai/nestjs-amqp';
+
 @Controller()
 export class MySubscriptionController {
-  @Subscribe('foo.bar.bin') // we can provide the consumerId here to allow multiple consumer in a single app
+  // Define a handler method for the subscribed message
+  @Subscribe('foo.bar.bin')
   async myHandler(
-    @Payload() payload: any // the parsed message data, with Nest's default decorator
-    @Headers() headers: any // these are not Nest's @Headers decorators, it's the one exposed from the package
-    @AttemptCount() count: number // current attempt count, starts at 1
+    @Payload() payload: any, // Parsed message data
+    @Headers() headers: any, // Message headers
+    @AttemptCount() count: number, // Current attempt count (starts at 1)
   ) {
-    // do magic 😎
+    // Implement your logic here
   }
 }
+```
 
-// Bind the controller to your appplications's modules
+After defining the controller, bind it to your application's modules:
+
+```typescript
 @Module({
   imports: [],
   providers: [],
   controllers: [MySubscriptionController],
 })
 export class AppModule {}
-
 ```
 
 ## Hybrid application setup
 
+If you're setting up a hybrid application (combining HTTP and AMQP), follow these steps:
+
 ```typescript
-// import AmqpModule in your application's modules
 @Module({
   imports: [
     AmqpModule.forRoot({
       url: 'amqp://rabbit:rabbit@localhost:5672',
-      // you can also provide more async configuration with forRootAsync and useFactory.
+      // Asynchronous configuration options can be provided using `forRootAsync` and `useFactory`
       isGlobal: true,
     }),
   ],
@@ -80,14 +91,18 @@ export class AppModule {}
   controllers: [MySubscriptionController],
 })
 export class AppModule {}
+```
 
-// in your main file
+In your main file, create the NestJS application and connect the microservice:
+
+```typescript
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // to reuse the same connection we can provide it here
+  // Retrieve the AMQP connection instance to reuse it
   const connection = app.get(AmqpConnection);
 
+  // Connect the microservice using the `AmqpExchangeTransport` strategy
   app.connectMicroservice<MicroserviceOptions>({
     strategy: new AmqpExchangeTransport({
       connection,
@@ -107,8 +122,11 @@ async function bootstrap() {
 
 ## Microservice application setup
 
+For a microservice application that exclusively uses AMQP, follow these steps:
+
+In your main file, create the microservice and configure the AmqpExchangeTransport strategy:
+
 ```typescript
-// in your main file
 async function bootstrap() {
   const app = await NestFactory.createMicroservice<MicroserviceOptions>(
     AppModule,
@@ -129,29 +147,49 @@ async function bootstrap() {
 }
 ```
 
+These setup instructions will help you get started with the AMQP Exchanges module for NestJS. By following these steps, you can effectively subscribe to messages and integrate AMQP messaging into your NestJS application or microservice.
+
 # Decorators
 
-This package provides the `@Subscribe` decorator to be used within your controllers. It's just an alias to Nest's default `@MessagePattern` decorator. We do this just to simplify understanding how to provide the routing keys and bind to specific consumers.
+This package includes several decorators that simplify the process of working with messaging in your controllers. These decorators are built on top of Nest's default decorators, providing additional functionality. Here's an overview of the most commonly used decorators:
 
-We also provide extra utilities decorators that are built on top of Nest's default createParamDecorator. Here's a list of the most used decorators:
+## @Subscribe
 
-- `@Subscribe('foo.bar')` binds the handler with messages that have the `foo.bar` routing key
-- `@Subscribe('foo.bar', Symbol.for('Consumer1'))` binds the handler with messages that have the `foo.bar` on a specific consumer
-- `@Headers()` injects the entire message headers into the param object
-- `@Headers('only-one')` injects the `only-one` message header into the param object
-- `@AttemptCount()` injects the current attempt count of the message into the param object, it starts at 1.
+The `@Subscribe` decorator is used to bind a handler method to messages with a specific routing key. It acts as an alias to Nest's default `@MessagePattern` decorator but focuses on providing a clear understanding of how to specify routing keys and bind to specific consumers. Usage examples include:
+
+- `@Subscribe('foo.bar')`: Binds the handler to messages with the foo.bar routing key.
+- `@Subscribe('foo.bar', Symbol.for('Consumer1'))`: Binds the handler to messages with the foo.bar routing key on a specific consumer.
+
+## @Headers
+
+The `@Headers` decorator allows you to access message headers within your handler methods. It can be used in two ways:
+
+- `@Headers()`: Injects the entire message headers object into the parameter.
+- `@Headers('only-one')`: Retrieves a specific message header (in this example, the only-one header) and injects it into the parameter.
+
+## AttemptCount
+
+The `@AttemptCount` decorator provides access to the current attempt count of a message within your handler methods. The attempt count indicates the number of times the message has been retried, starting from 1.
+
+## RawMessage
+
+The `@RawMessage` decorator provides access to the current raw message within your handler methods. This can be used to extract any other information from the message like it's fields or properties.
+
+By utilizing these decorators, you can easily bind handlers to specific routing keys, access message headers, and retrieve the attempt count of messages. This enhances the readability and simplicity of your messaging code within your NestJS controllers.
 
 # Configurations
 
 ## Retrial Configurations
 
-You may have noticed that we are using some customized retry configuration in our consumers. That is an optional configuration you can provide in order to fine tune the consumption and retrial of events to your needs. First, consider that a maximum retrial of 5 means that your handler will execute at most 6 times, not 5. That is because we don't consider the first attempt as a retrial, but rather the expected first attempt. Then, if your message fails, we try again for a maximum of the configured retrial number.
+In our consumers, you may have noticed that we utilize customized retry configurations. These configurations are optional and allow you to fine-tune the consumption and retrial of events according to your specific needs. Here are some important points to understand about the retry configurations:
 
-Interval between retrials is the number of millis to wait, this interval gets doubled with every attempt to the maximum of the configured maxInterval. If none is provided, we'll keep doubling indefinitely.
+- Maximum Retrial: When specifying the maximum retrial value, it's essential to note that your handler will execute at most one more time than the specified value. For example, if you set the maximum retrial to 5, your handler will execute a total of 6 times. This is because we consider the initial attempt as the expected first attempt, not a retrial. If the message fails, we will attempt to retry it for a maximum of the configured retrial number. This is configured through the `retrial.limit` property.
 
-## Consuming other exchanges
+- Interval Between Retrials: The interval between retrials determines the waiting period in milliseconds before each retry attempt. With each subsequent retry, this interval doubles until it reaches the maximum interval specified in the configuration. If you do not provide a maximum interval, the doubling will continue indefinitely. It is configured through the `retrial.interval` property.
 
-In order to consume another exchange we can bind the exchange as follows:
+- Maximum Interval Between Retrials: This is a limit that will prevent doublings beyond this limit and is configured thorugh the `retrial.maxInterval` property.
+
+To configure these values you can use the following approach:
 
 ```typescript
 app.connectMicroservice<MicroserviceOptions>({
@@ -159,7 +197,28 @@ app.connectMicroservice<MicroserviceOptions>({
     connection,
     exchange: {
       name: 'zen',
-      //here
+    },
+    // Specify the retry policy
+    retry: {
+      maxInterval: 25000,
+      interval: 2500,
+      limit: 5,
+    },
+  }),
+});
+```
+
+## Consuming from Other Exchanges
+
+To consume messages from another exchange, you can bind the exchange using the following approach:
+
+```typescript
+app.connectMicroservice<MicroserviceOptions>({
+  strategy: new AmqpExchangeTransport({
+    connection,
+    exchange: {
+      name: 'zen',
+      // Specify the exchange to bind to and its routing key
       bindToExchanges: [
         {
           name: 'zen.dlx',
@@ -167,85 +226,117 @@ app.connectMicroservice<MicroserviceOptions>({
         },
       ],
     },
-    retry: {
-      maxInterval: 2500,
-      interval: 2500,
-      limit: 5,
-    },
   }),
 });
 ```
 
-By doing this, we receive whatever gets published into that exchange following the routing key in the service exchange. We can do this to bind to any existing exchange, in this example we have bound to the dead letter exchange `.dlx`, but it would work with any other exchange.
+By employing this configuration, your service will receive any messages published to the specified exchange, adhering to the routing key within your service's exchange. This approach allows you to bind to any existing exchange. In the provided example, we have bound to the dead letter exchange (`zen.dlx`), but you can apply the same technique to bind with any other exchange you require.
 
-## How to use multiple consumers in the same app
+## Consuming the Same Message in Multiple Handlers
 
-That might be tricky, but you can connect as many consumers as your have resources to handle. We recomend that you create an object that will control your subscriptions ids in your app and provide it to each consumer when instantiating the transport. For example:
+When consuming messages in controllers using the AMQP Exchanges module, it is possible to route a single message to multiple handlers based on their routing keys. This allows you to handle the same message in different ways depending on the specific routing key patterns defined in your handlers.
+
+For example, let's consider two handlers in a controller:
 
 ```typescript
-// Somewhere in your app
-export const Consumers = {
-  ZenConsumer: Symbol.for('Zen'),
-  GedaiConsumer: Symbol.for('Gedai'),
-};
-
-// in main
-app.connectMicroservice<MicroserviceOptions>({
-  strategy: new AmqpExchangeTransport({
-    consumerId: Consumers.ZenConsumer, // here
-    connection,
-    exchange: {
-      name: 'zen',
-    },
-    retry: {
-      maxInterval: 2500,
-      interval: 2500,
-      limit: 5,
-    },
-  }),
-});
-
-app.connectMicroservice<MicroserviceOptions>({
-  strategy: new AmqpExchangeTransport({
-    consumerId: Consumers.GedaiConsumer, // and here
-    connection,
-    exchange: {
-      name: 'zen',
-    },
-    retry: {
-      maxInterval: 2500,
-      interval: 2500,
-      limit: 5,
-    },
-  }),
-});
-
-// in controllers you specify to which consumer you are binding the events
 @Controller()
 export class MySubscriptionController {
-  @Subscribe('foo.bar.bin', Consumers.ZenConsumer) // here
-  async myHandler() {
-    // do magic 😎
+  @Subscribe('foo.bar')
+  async handlerOne() {
+    // Handle the message for 'foo.bar'
   }
 
-  @Subscribe('bazinga.foo.bar', Consumers.GedaiConsumer) // and here
-  async myOtherHandler() {
-    // do magic 😎
+  @Subscribe('foo.*')
+  async handlerTwo() {
+    // Handle the message for any routing key starting with 'foo.'
   }
 }
 ```
 
-This setup allows you to configure multiple consumers in a hybrid application and bind to events independently from each other. You might event have similar routing keys, but they will only get triggered when a message comes to that specific consumer (which means, falling in its conrolling exchange).
+In this scenario, if a message with the routing key 'foo.bar' is received, it will trigger both `handlerOne` and `handlerTwo`. Both handlers will run independently for retrial and dead lettering purposes. This means that if the message fails and needs to be retried, each handler will follow its own retry logic and potential dead lettering, separate from the other handler. Another scenario would be that `handlerOne` fails and needs to retry the message, but `handlerTwo` succeeds and doesn't need to retry.
 
-# Behind the Scenes (inside RabbitMQ Server)
+So, while both handlers are triggered by the same message, they operate in isolation for retrial and dead lettering processes. This flexibility allows you to have multiple handlers processing the same message based on different routing key patterns, enabling you to handle the message in distinct ways according to your application's needs.
 
-Behind the scenes we are creating two exchanges for our consumers to work with. The first one, is the actual consumer's exchange and will have the same name you provide in the exchange parameter. It will bind to two queues, the `main` and the `retry` which are sufixes to the exchange name.
+## Using Multiple Consumers in the Same App
 
-For example, `zen` exchange produces two queues `zen.main` and `zen.retry`.
+If you need to connect multiple consumers within the same application, you can do so by following these steps:
 
-Any message that fails our consumer (eg.`throws`) will get sent to the retry queue with an expiration period, when that expiration period expires, the message dies and gets requeued into the exchange which resends the message to the main queue for retrial. When all attempts fail, we send that message to the dead letter exchange, which again is a sufix to the original exchange's name. In our example, `zen` gets the `zen.dlx` exchange that has no bindings unless you decide to do so.
+Create an object that will manage your subscription IDs throughout your app. This object will control and provide the subscription IDs to each consumer. Here's an example:
 
-So, with the following setup:
+```typescript
+// Define the consumer IDs in an object
+export const Consumers = {
+  ZenConsumer: Symbol.for('Zen'),
+  GedaiConsumer: Symbol.for('Gedai'),
+};
+```
+
+In your main file, when instantiating the transport for each consumer, assign the appropriate consumer ID from the object created in the previous step. Here's an example:
+
+```typescript
+// Connect the first consumer
+app.connectMicroservice<MicroserviceOptions>({
+  strategy: new AmqpExchangeTransport({
+    consumerId: Consumers.ZenConsumer,
+    connection,
+    exchange: {
+      name: 'zen',
+    },
+  }),
+});
+
+// Connect the second consumer
+app.connectMicroservice<MicroserviceOptions>({
+  strategy: new AmqpExchangeTransport({
+    consumerId: Consumers.GedaiConsumer,
+    connection,
+    exchange: {
+      name: 'gedai',
+    },
+  }),
+});
+```
+
+In your controllers, specify to which consumer you want to bind the events using the appropriate consumer ID. Here's an example:
+
+```typescript
+@Controller()
+export class MySubscriptionController {
+  // Bind the event to the ZenConsumer
+  @Subscribe('foo.bar.bin', Consumers.ZenConsumer)
+  async myHandler() {
+    // Handle the event
+  }
+
+  // Bind the event to the GedaiConsumer
+  @Subscribe('bazinga.foo.bar', Consumers.GedaiConsumer)
+  async myOtherHandler() {
+    // Handle the event
+  }
+}
+```
+
+By following this setup, you can configure multiple consumers within a hybrid application and bind events independently. You can even have similar routing keys, but each event will only be triggered for the specific consumer it is assigned to, based on its controlling exchange.
+
+# Behind the Scenes (In depth of RabbitMQ Server)
+
+Behind the scenes, the AMQP Exchanges module creates two exchanges to facilitate the functioning of your consumers. Let's take a closer look at these exchanges and the related artifacts created within RabbitMQ:
+
+1. Consumer's Exchange: The first exchange created is the consumer's exchange, which has the same name as the one provided in the `exchange` parameter. For example, if you specify the exchange name as 'zen', the consumer's exchange will also be named 'zen'. This exchange is responsible for handling the messages received by the consumers.
+
+1. Queues: Two queues are created for each consumer's exchange: the `main` queue and the `retry` queue. These queues are named by appending the respective suffixes to the consumer's exchange name. For example, if the consumer's exchange is 'zen', the corresponding queues will be 'zen.main' and 'zen.retry'.
+
+1. Bindings: The following bindings are established between the exchanges, routing keys, and queues:
+   - Binding 1: `exchange(zen)` => `routingKey(zen.main)` => `queue(zen.main)`
+     This binding is used for rerouting retrials. Messages that fail to be processed by the consumer are sent to the retry queue, and after a specified expiration period, they are requeued into the consumer's exchange, which then resends them to the main queue for retrial.
+   - Binding 2: `exchange(zen)` => `routingKey(zen.retry)` => `queue(zen.retry)`
+     This binding is used for waiting between retrials. Messages in the retry queue are held here temporarily before being requeued for the next retry attempt.
+   - Binding 3: `exchange(zen)` => `routingKey(foo.*)` => `queue(zen.main)`
+     This binding is used to actually bind the messages to the consumer. Messages with routing keys that match the pattern specified in your controllers are directed to the main queue of the consumer's exchange.
+
+In addition to these artifacts, a dead letter exchange is created with a dlx suffix to the original exchange's name. For example, if the consumer's exchange is 'zen', the dead letter exchange will be 'zen.dlx'. The dead letter exchange is not bound to any queues by default unless you explicitly define the bindings.
+
+With the following setup:
 
 ```typescript
 // consumer config
@@ -268,15 +359,17 @@ class Controller {
 }
 ```
 
-You get the following RabbitMQ artifacts:
+The resulting RabbitMQ artifacts would be as follows:
 
 - Exchanges:
-- - zen
-- - zen.dlx
+  - zen
+  - zen.dlx (Dead Letter Exchange)
 - Queues:
-- - zen.main
-- - zen.retry
+  - zen.main
+  - zen.retry
 - Bindings:
-- - exchange(zen) => routingKey(zen.main) => queue(zen.main) [used for rerouting retrials]
-- - exchange(zen) => routingKey(zen.retry) => queue(zen.retry) [used for waiting between retrials]
-- - exchange(zen) => routingKey(foo.\*) => queue(zen.main) [used for actually binding messages]
+  - Rerouting Retrial: `exchange(zen)` => `routingKey(zen.main)` => `queue(zen.main)`
+  - Waiting between retrials: `exchange(zen)` => `routingKey(zen.retry)` => `queue(zen.retry)`
+  - Consuming messages: `exchange(zen)` => `routingKey(foo.*)` => `queue(zen.main)`
+
+These RabbitMQ artifacts enable the functioning of the AMQP Exchanges module and ensure the proper handling and routing of messages within your application.
