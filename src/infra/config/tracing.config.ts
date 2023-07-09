@@ -22,6 +22,7 @@ export class TracingModule {
               return traceId;
             case 'rpc':
               /** @LIMITATION currently working with amqp only */
+              /** @LIMITATION this will generate a single traceId for all handlers */
               const rawMessage = context.switchToRpc().getContext<Message>();
               traceId =
                 rawMessage.properties.headers['x-trace-id'] || randomUUID();

@@ -1,9 +1,5 @@
 import { Logger } from '@nestjs/common';
-import {
-  CustomTransportStrategy,
-  MessageHandler,
-  Server,
-} from '@nestjs/microservices';
+import { CustomTransportStrategy, Server } from '@nestjs/microservices';
 import { ChannelWrapper } from 'amqp-connection-manager';
 import { Channel, ConsumeMessage } from 'amqplib';
 import {
@@ -155,12 +151,12 @@ export class AmqpExchangeTransport
               return { message, routingKey, isDeadHandler, failedRoutingKey };
             }),
 
-            filter(({ routingKey }) => regex.test(routingKey)),
             filter(
-              ({ failedRoutingKey, isDeadHandler }) =>
-                isDeadHandler ||
-                !failedRoutingKey ||
-                failedRoutingKey === handlerRoutingKey,
+              ({ routingKey, failedRoutingKey, isDeadHandler }) =>
+                regex.test(routingKey) &&
+                (isDeadHandler ||
+                  !failedRoutingKey ||
+                  failedRoutingKey === handlerRoutingKey),
             ),
           )
           .subscribe(async (/*NOSONAR*/ { message, routingKey }) => {
@@ -227,16 +223,6 @@ export class AmqpExchangeTransport
     return maxInterval && expiration > maxInterval ? maxInterval : expiration;
   }
 
-  private getHandlerByRoutingKey(
-    routingKey: string,
-  ): MessageHandler<any, any, any> {
-    const routingKeyMap = this.routingKeys.find((x) =>
-      x.regex.test(routingKey),
-    );
-
-    return this.getHandlerByPattern(routingKeyMap.routingKey);
-  }
-
   private isDeadHandler(message: ConsumeMessage) {
     return message.fields.routingKey.endsWith('.dead');
   }
@@ -281,6 +267,7 @@ export class AmqpExchangeTransport
         {
           expiration,
           headers: {
+            ...message.properties.headers,
             [ControlHeaders.OriginalRoutingKey]: routingKey,
             [ControlHeaders.FailedHandlerRoutingKey]: failedRoutingKey,
             [ControlHeaders.AttemptCount]: totalAttempts + 1,
@@ -297,6 +284,7 @@ export class AmqpExchangeTransport
         message.content,
         {
           headers: {
+            ...message.properties.headers,
             [ControlHeaders.DeadReason]: `Maximum attempts of ${limit} reached`,
             [ControlHeaders.OriginalRoutingKey]: routingKey,
             [ControlHeaders.FailedHandlerRoutingKey]: routingKey,

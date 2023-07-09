@@ -5,17 +5,19 @@ import {
   MessageHeaders,
   Subscribe,
 } from '@infra/providers/amqp';
-import { Controller } from '@nestjs/common';
+import { Controller, Logger } from '@nestjs/common';
 import { Payload } from '@nestjs/microservices';
 
 @Controller()
 export class GedaiSubscriptionController {
-  @Subscribe('foo.bar', GedaiConsumer)
+  private readonly logger = new Logger(this.constructor.name);
+
+  @Subscribe('foo.bar.bin', GedaiConsumer)
   async getById(
     @Payload() data: any,
     @Headers() headers: MessageHeaders,
     @AttemptCount() attemptCount: number,
   ) {
-    console.log('GEDAI', { data, attemptCount, headers });
+    this.logger.log('GEDAI ON');
   }
 }

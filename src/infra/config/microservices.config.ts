@@ -35,7 +35,7 @@ const gedaiMicroserviceConfig = (
       name: 'gedai',
       bindToExchange: {
         name: 'zen',
-        routingKey: 'foo.*',
+        routingKey: 'foo.#',
       },
     },
     retry: {
