@@ -257,6 +257,63 @@ In this scenario, if a message with the routing key 'foo.bar' is received, it wi
 
 So, while both handlers are triggered by the same message, they operate in isolation for retrial and dead lettering processes. This flexibility allows you to have multiple handlers processing the same message based on different routing key patterns, enabling you to handle the message in distinct ways according to your application's needs.
 
+## Consuming the same message with the exact same routing keys
+
+Additionally, if you have the requirement to have two handlers with the exact same routing key, you can achieve this by setting up multiple consumers using the multiple consumers setup approach and binding their exchanges.
+
+Let's say you have two handlers that need to handle messages with the routing key 'foo.bar'. Instead of defining both handlers in the same consumer, you can create separate consumers, bind them together and assign them the same routing key. Here's an example:
+
+```typescript
+// consumer config for Consumer A
+app.connectMicroservice<MicroserviceOptions>({
+  strategy: new AmqpExchangeTransport({
+    consumerId: Consumers.ConsumerA,
+    connection,
+    exchange: {
+      name: 'zen',
+    },
+  }),
+});
+
+// consumer config for Consumer B
+app.connectMicroservice<MicroserviceOptions>({
+  strategy: new AmqpExchangeTransport({
+    consumerId: Consumers.ConsumerB,
+    connection,
+    exchange: {
+      // clone the exchange
+      name: 'zenClone',
+      bindToExchanges: [
+        {
+          name: 'zen',
+          routingKey: 'foo.bar',
+        },
+      ],
+    },
+  }),
+});
+
+// controller config for Consumer A
+class ControllerA {
+  @Subscribe('foo.bar', Consumers.ConsumerA)
+  async handlerA() {
+    // Handle the message for 'foo.bar' in Consumer A
+  }
+}
+
+// controller config for Consumer B
+class ControllerB {
+  @Subscribe('foo.bar', Consumers.ConsumerB)
+  async handlerB() {
+    // Handle the message for 'foo.bar' in Consumer B
+  }
+}
+```
+
+With this setup, you can have two separate consumers, Consumer A and Consumer B, both handling messages with the exact same routing key 'foo.bar'. Each consumer will independently process the messages assigned to them, enabling you to have different logic or behavior in each handler.
+
+By utilizing multiple consumers with the same routing key, you can achieve the desired separation and individual processing of messages with identical routing keys, ensuring that each handler operates independently within its designated consumer.
+
 ## Using Multiple Consumers in the Same App
 
 If you need to connect multiple consumers within the same application, you can do so by following these steps:
