@@ -11,10 +11,12 @@ const zenMicroserviceConfig = (
     connection,
     exchange: {
       name: 'zen',
-      bindToExchange: {
-        name: 'zen.dlx',
-        routingKey: '#.dead',
-      },
+      bindToExchanges: [
+        {
+          name: 'zen.dlx',
+          routingKey: '#.dead',
+        },
+      ],
     },
     retry: {
       maxInterval: 2500,
@@ -33,15 +35,12 @@ const gedaiMicroserviceConfig = (
     connection,
     exchange: {
       name: 'gedai',
-      bindToExchange: {
-        name: 'zen',
-        routingKey: 'foo.#',
-      },
-    },
-    retry: {
-      maxInterval: 2500,
-      interval: 2500,
-      limit: 5,
+      bindToExchanges: [
+        {
+          name: 'zen',
+          routingKey: 'foo.#',
+        },
+      ],
     },
   }),
 });

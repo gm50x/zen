@@ -23,6 +23,7 @@ import { AmqpModule } from '@infra/providers/amqp';
     MongooseModule.forRootAsync({ useClass: MongoConfig }),
     AmqpModule.forRootAsync({
       inject: [ConfigService],
+      isGlobal: true,
       useFactory: (config: ConfigService) => ({ url: config.get('AMQP_URL') }),
     }),
     SyncBanksModule,

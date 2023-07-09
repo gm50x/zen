@@ -8,11 +8,14 @@ export type AmqpConnectionOptions = {
   url: string;
 };
 
-export type AmqpModuleOptions /* NOSONAR */ = AmqpConnectionOptions;
+export type AmqpModuleOptions = AmqpConnectionOptions & {
+  isGlobal?: boolean;
+};
 
 export interface AmqpModuleAsyncOptions
   extends Pick<ModuleMetadata, 'imports'> {
   inject?: any[];
+  isGlobal?: boolean;
   useFactory?: (...args: any[]) => AmqpConnectionOptions;
 }
 
@@ -39,15 +42,17 @@ export class AmqpExchangeController {
 export type AmqpExchangeOption = {
   name: string;
   type?: AmqpExchangeType;
-  bindToExchange?: {
-    name: string;
-    routingKey: string;
-  };
+  bindToExchanges?: [
+    {
+      name: string;
+      routingKey: string;
+    },
+  ];
 };
 
 export type AmqpRetryOptions = {
-  limit: number;
-  interval: number;
+  limit?: number;
+  interval?: number;
   maxInterval?: number;
 };
 
@@ -56,7 +61,7 @@ export type AmqpExchangeTransportOptions = {
   connection?: AmqpConnection;
   consumerId?: symbol;
   exchange: AmqpExchangeOption;
-  retry: AmqpRetryOptions;
+  retry?: AmqpRetryOptions;
 };
 
 export type Message = ConsumeMessage;

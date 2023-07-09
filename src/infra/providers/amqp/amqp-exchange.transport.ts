@@ -46,6 +46,10 @@ export class AmqpExchangeTransport
       this.options.exchange.name,
       this.options.exchange.type,
     );
+
+    if (!this.options.retry) {
+      this.options.retry = {};
+    }
   }
 
   async listen(callback: () => void) {
@@ -125,15 +129,15 @@ export class AmqpExchangeTransport
   }
 
   private async bindExchanges(channel: Channel) {
-    const exchangeToBind = this.options.exchange.bindToExchange;
-    if (!exchangeToBind) {
+    const exchangeBindings = this.options.exchange.bindToExchanges;
+    if (!exchangeBindings) {
       return;
     }
 
-    await channel.bindExchange(
-      this.exchange.name,
-      exchangeToBind.name,
-      exchangeToBind.routingKey,
+    await Promise.all(
+      exchangeBindings.map((x) =>
+        channel.bindExchange(this.exchange.name, x.name, x.routingKey),
+      ),
     );
   }
 

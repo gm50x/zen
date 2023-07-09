@@ -6,10 +6,12 @@ import { AmqpService } from './amqp.service';
 @Module({})
 export class AmqpModule {
   static forRoot(options: AmqpModuleOptions): DynamicModule {
+    const { url, isGlobal = false } = options;
     return {
       module: AmqpModule,
+      global: isGlobal,
       providers: [
-        { provide: 'AmqpExchangeOptions', useValue: { url: options.url } },
+        { provide: 'AmqpExchangeOptions', useValue: { url } },
         AmqpConnection,
         AmqpService,
       ],
@@ -18,11 +20,12 @@ export class AmqpModule {
   }
 
   static forRootAsync(options: AmqpModuleAsyncOptions): DynamicModule {
-    const { imports, useFactory, inject } = options || {};
+    const { imports, useFactory, inject, isGlobal = false } = options;
 
     return {
       module: AmqpModule,
       imports,
+      global: isGlobal,
       providers: [
         { provide: 'AmqpExchangeOptions', inject, useFactory },
         AmqpConnection,
