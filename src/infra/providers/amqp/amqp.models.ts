@@ -65,6 +65,7 @@ export type MessageHeaders = Record<string, any>;
 export const ControlHeaders = {
   AttemptCount: 'x-attempt-count',
   OriginalRoutingKey: 'x-original-routing-key',
+  FailedHandlerRoutingKey: 'x-failed-handler-routing-key',
   DeadReason: 'x-dead-reason',
 } as const;
 

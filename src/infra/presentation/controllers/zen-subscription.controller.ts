@@ -21,20 +21,15 @@ export class ZenSubscriptionController {
     @Headers() headers: MessageHeaders,
     @AttemptCount() attemptCount: number,
   ) {
+    this.logger.log('Got message', 'foo.*.bin');
     if (data.fail >= attemptCount) {
-      this.logger.log({ message: 'throwing', attemptCount });
+      this.logger.warn('Throwing message', 'foo.*.bin');
 
       throw new AmqpException(
         'Required fail greater than current attempt count',
       );
     }
-
-    this.logger.log({
-      message: 'Completing message handling, foo.*.bin',
-      data,
-      attemptCount,
-      headers,
-    });
+    this.logger.log('Completed message', 'foo.*.bin');
   }
 
   /** THIS NEVER GETS SUBSCRIBED UNLESS IT'S PART OF ANOTHER CONSUMER, NOT YET REACTIVE */
@@ -44,12 +39,8 @@ export class ZenSubscriptionController {
     @Headers() headers: MessageHeaders,
     @AttemptCount() attemptCount: number,
   ) {
-    this.logger.log({
-      message: 'Completing message handling #.bin',
-      data,
-      attemptCount,
-      headers,
-    });
+    this.logger.log('Got message', '#.bin');
+    this.logger.log('Completed message', '#.bin');
   }
 
   @Subscribe('#.dead', ZenConsumer)
@@ -58,11 +49,7 @@ export class ZenSubscriptionController {
     @Headers() headers: MessageHeaders,
     @AttemptCount() attemptCount: number,
   ) {
-    this.logger.log({
-      message: 'Dead message received #.dead',
-      data,
-      attemptCount,
-      headers,
-    });
+    this.logger.log('Got message', '#.dead');
+    this.logger.log('Completed message', '#.dead');
   }
 }

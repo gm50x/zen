@@ -6,7 +6,14 @@ import {
 } from '@nestjs/microservices';
 import { ChannelWrapper } from 'amqp-connection-manager';
 import { Channel, ConsumeMessage } from 'amqplib';
-import { isObservable, lastValueFrom } from 'rxjs';
+import {
+  Subject,
+  Subscription,
+  filter,
+  isObservable,
+  lastValueFrom,
+  map,
+} from 'rxjs';
 import { AmqpConnection } from './amqp.connection';
 import {
   AmqpExchangeController,
@@ -23,9 +30,11 @@ export class AmqpExchangeTransport
   protected readonly logger = new Logger(this.constructor.name);
 
   private readonly exchange: AmqpExchangeController;
+  private readonly subject = new Subject<ConsumeMessage>();
   private connection: AmqpConnection;
   private channel: ChannelWrapper;
   private routingKeys: { routingKey: string; regex: RegExp }[];
+  private subscriptions: Subscription[];
 
   constructor(private readonly options: AmqpExchangeTransportOptions) {
     super();
@@ -60,6 +69,8 @@ export class AmqpExchangeTransport
 
   async close() {
     await this.connection.close();
+    this.subscriptions.forEach((subscription) => subscription.unsubscribe());
+    // TODO: should we close subject somehow?
   }
 
   //#region internals
@@ -130,12 +141,56 @@ export class AmqpExchangeTransport
     );
   }
 
+  private async bindSubscriptionHandlers() {
+    const obs$ = this.subject.asObservable();
+
+    this.subscriptions = this.routingKeys.map(
+      ({ routingKey: handlerRoutingKey, regex }) =>
+        obs$
+          .pipe(
+            map((message: ConsumeMessage) => {
+              const isDeadHandler = this.isDeadHandler(message);
+              const failedRoutingKey = this.getFailedRoutingKey(message);
+              const routingKey = this.getRoutingKey(message, isDeadHandler);
+              return { message, routingKey, isDeadHandler, failedRoutingKey };
+            }),
+
+            filter(({ routingKey }) => regex.test(routingKey)),
+            filter(
+              ({ failedRoutingKey, isDeadHandler }) =>
+                isDeadHandler ||
+                !failedRoutingKey ||
+                failedRoutingKey === handlerRoutingKey,
+            ),
+          )
+          .subscribe(async (/*NOSONAR*/ { message, routingKey }) => {
+            const handler = this.getHandlerByPattern(handlerRoutingKey);
+            if (!handler) {
+              this.logger.warn(
+                `No handler found for message with pattern ${routingKey}`,
+              );
+              return;
+            }
+
+            try {
+              const result = await handler(this.tryParse(message), message);
+              if (isObservable(result)) {
+                await lastValueFrom(result);
+              }
+            } catch (err) {
+              await this.onMessageError(message, handlerRoutingKey);
+            }
+          }),
+    );
+  }
+
   private async setup(channel: Channel) {
     await this.assertExchange(channel);
     await this.assertQueues(channel);
     await this.bindQueues(channel);
-    await this.bindRoutingKeys(channel);
     await this.bindExchanges(channel);
+    await this.bindRoutingKeys(channel);
+    await this.bindSubscriptionHandlers();
   }
 
   private connect() {
@@ -175,15 +230,25 @@ export class AmqpExchangeTransport
   private getHandlerByRoutingKey(
     routingKey: string,
   ): MessageHandler<any, any, any> {
-    const handler = this.routingKeys.find((x) => x.regex.test(routingKey));
-    return this.getHandlerByPattern(handler.routingKey);
+    const routingKeyMap = this.routingKeys.find((x) =>
+      x.regex.test(routingKey),
+    );
+
+    return this.getHandlerByPattern(routingKeyMap.routingKey);
   }
 
   private isDeadHandler(message: ConsumeMessage) {
     return message.fields.routingKey.endsWith('.dead');
   }
 
-  private getRoutingKey(message: ConsumeMessage, isDeadHandler: boolean) {
+  private getFailedRoutingKey(message: ConsumeMessage) {
+    return message.properties.headers[ControlHeaders.FailedHandlerRoutingKey];
+  }
+
+  private getRoutingKey(
+    message: ConsumeMessage,
+    isDeadHandler: boolean,
+  ): string {
     if (isDeadHandler) {
       return message.fields.routingKey;
     }
@@ -195,50 +260,13 @@ export class AmqpExchangeTransport
   }
 
   private async onMessage(message: ConsumeMessage) {
-    const isDeadHandler = this.isDeadHandler(message);
-    const routingKey = this.getRoutingKey(message, isDeadHandler);
-
-    /** TODO: this should return multiple handler that need all be triggered */
-    /**
-     * const handlers = []
-     * TransformToObservables(handlers).pipe(handler, catchError()).subscribe()
-     *
-     */
-    // trigger multiple bindings with a single message on the same consumer
-    // rxjs handlers -> Observables.pipe(each match).subscribe()
-
-    const handler = this.getHandlerByRoutingKey(routingKey);
-    if (!handler) {
-      this.logger.warn(
-        `No handler found for message with pattern ${routingKey}`,
-      );
-      return;
-    }
-
-    try {
-      const result = await handler(this.tryParse(message), message);
-      if (isObservable(result)) {
-        await lastValueFrom(result);
-      }
-    } catch (err) {
-      await this.onMessageError(message);
-    }
+    this.subject.next(message);
   }
 
-  private async onMessageError(message: ConsumeMessage) {
-    /** TODO: Allow retrying unique handlers:
-     * If we have two subscriptions on the same microservice
-     * that get triggered by the same message we should be able to
-     * retry each handler independendly of each other.
-     * For example:
-     * ```typescript
-     *  @SubscribePattern('foo.bar') fooBarHandler() {}
-     *  @SubscribePattern('foo.*') fooAnyHandler() {}
-     * ```
-     * We then would want to be able to retry `foo.bar` independently
-     * from `foo.*`. The current setup only allows this through the use
-     * of multiple exchanges and therefore subscriptions...
-     */
+  private async onMessageError(
+    message: ConsumeMessage,
+    failedRoutingKey: string,
+  ) {
     const { limit = 10 } = this.options.retry;
     const totalAttempts =
       message.properties.headers[ControlHeaders.AttemptCount] || 1;
@@ -254,6 +282,7 @@ export class AmqpExchangeTransport
           expiration,
           headers: {
             [ControlHeaders.OriginalRoutingKey]: routingKey,
+            [ControlHeaders.FailedHandlerRoutingKey]: failedRoutingKey,
             [ControlHeaders.AttemptCount]: totalAttempts + 1,
           },
         },
@@ -270,6 +299,7 @@ export class AmqpExchangeTransport
           headers: {
             [ControlHeaders.DeadReason]: `Maximum attempts of ${limit} reached`,
             [ControlHeaders.OriginalRoutingKey]: routingKey,
+            [ControlHeaders.FailedHandlerRoutingKey]: routingKey,
             [ControlHeaders.AttemptCount]: totalAttempts,
           },
         },
