@@ -18,22 +18,21 @@ export interface AmqpModuleAsyncOptions
 
 export type AmqpExchangeType = 'direct' | 'topic';
 
-export class AmqpExchange {
+export class AmqpExchangeController {
   constructor(
     readonly name: string,
     readonly type: AmqpExchangeType = 'topic',
   ) {}
 
-  get main() {
-    return `${this.name}.main`;
+  get dlx() {
+    return `${this.name}.dlx`;
   }
 
-  get retry() {
-    return `${this.name}.retry`;
-  }
-
-  get dead() {
-    return `${this.name}.dead`;
+  get queues() {
+    return {
+      main: `${this.name}.main`,
+      retry: `${this.name}.retry`,
+    };
   }
 }
 

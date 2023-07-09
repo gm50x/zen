@@ -9,7 +9,7 @@ import { Channel, ConsumeMessage } from 'amqplib';
 import { isObservable, lastValueFrom } from 'rxjs';
 import { AmqpConnection } from './amqp.connection';
 import {
-  AmqpExchange,
+  AmqpExchangeController,
   AmqpExchangeTransportOptions,
   ControlHeaders,
 } from './amqp.models';
@@ -22,7 +22,7 @@ export class AmqpExchangeTransport
 
   protected readonly logger = new Logger(this.constructor.name);
 
-  private readonly exchange: AmqpExchange;
+  private readonly exchange: AmqpExchangeController;
   private connection: AmqpConnection;
   private channel: ChannelWrapper;
   private routingKeys: { routingKey: string; regex: RegExp }[];
@@ -37,7 +37,7 @@ export class AmqpExchangeTransport
 
     this.transportId = options.consumerId || Symbol.for(options.exchange.name);
 
-    this.exchange = new AmqpExchange(
+    this.exchange = new AmqpExchangeController(
       this.options.exchange.name,
       this.options.exchange.type,
     );
@@ -52,7 +52,7 @@ export class AmqpExchangeTransport
      * both foo.bar handle and foo.*.
      */
 
-    this.channel.consume(this.exchange.main, this.onMessage.bind(this), {
+    this.channel.consume(this.exchange.queues.main, this.onMessage.bind(this), {
       noAck: true,
     });
     callback();
@@ -65,22 +65,21 @@ export class AmqpExchangeTransport
   //#region internals
   private async assertExchange(channel: Channel) {
     await channel.assertExchange(this.exchange.name, this.exchange.type);
+    await channel.assertExchange(this.exchange.dlx, this.exchange.type);
   }
 
   private async assertQueues(channel: Channel) {
-    const { name: exchange, main, retry, dead } = this.exchange;
+    const { name: exchange, queues: q } = this.exchange;
 
-    await channel.assertQueue(main, {
+    await channel.assertQueue(q.main, {
       deadLetterExchange: exchange,
-      deadLetterRoutingKey: retry,
+      deadLetterRoutingKey: q.retry,
     });
 
-    await channel.assertQueue(retry, {
+    await channel.assertQueue(q.retry, {
       deadLetterExchange: exchange,
-      deadLetterRoutingKey: main,
+      deadLetterRoutingKey: q.main,
     });
-
-    await channel.assertQueue(dead);
   }
 
   private getRoutingKeyRegex(routingKey: string) {
@@ -93,10 +92,10 @@ export class AmqpExchangeTransport
   }
 
   private async bindQueues(channel: Channel) {
-    const { name: exchange, main, retry } = this.exchange;
+    const { name: exchange, queues: q } = this.exchange;
 
-    await channel.bindQueue(main, exchange, main);
-    await channel.bindQueue(retry, exchange, retry);
+    await channel.bindQueue(q.main, exchange, q.main);
+    await channel.bindQueue(q.retry, exchange, q.retry);
   }
 
   private async bindRoutingKeys(channel: Channel) {
@@ -108,8 +107,12 @@ export class AmqpExchangeTransport
     }));
 
     await Promise.all(
-      routingKeys.map((key) =>
-        channel.bindQueue(this.exchange.main, this.exchange.name, key),
+      routingKeys.map((routingKey) =>
+        channel.bindQueue(
+          this.exchange.queues.main,
+          this.exchange.name,
+          routingKey,
+        ),
       ),
     );
   }
@@ -176,12 +179,34 @@ export class AmqpExchangeTransport
     return this.getHandlerByPattern(handler.routingKey);
   }
 
+  private isDeadHandler(message: ConsumeMessage) {
+    return message.fields.routingKey.endsWith('.dead');
+  }
+
+  private getRoutingKey(message: ConsumeMessage, isDeadHandler: boolean) {
+    if (isDeadHandler) {
+      return message.fields.routingKey;
+    }
+
+    return (
+      message.properties.headers[ControlHeaders.OriginalRoutingKey] ||
+      message.fields.routingKey
+    );
+  }
+
   private async onMessage(message: ConsumeMessage) {
-    const routingKey =
-      message.properties.headers['x-original-routing-key'] ||
-      message.fields.routingKey;
+    const isDeadHandler = this.isDeadHandler(message);
+    const routingKey = this.getRoutingKey(message, isDeadHandler);
 
     /** TODO: this should return multiple handler that need all be triggered */
+    /**
+     * const handlers = []
+     * TransformToObservables(handlers).pipe(handler, catchError()).subscribe()
+     *
+     */
+    // trigger multiple bindings with a single message on the same consumer
+    // rxjs handlers -> Observables.pipe(each match).subscribe()
+
     const handler = this.getHandlerByRoutingKey(routingKey);
     if (!handler) {
       this.logger.warn(
@@ -218,30 +243,38 @@ export class AmqpExchangeTransport
     const totalAttempts =
       message.properties.headers[ControlHeaders.AttemptCount] || 1;
 
-    const routingKey =
-      message.properties.headers[ControlHeaders.OriginalRoutingKey] ||
-      message.fields.routingKey;
+    const routingKey = this.getRoutingKey(message, false);
 
-    if (totalAttempts > limit) {
-      await this.channel.sendToQueue(this.exchange.dead, message.content, {
-        headers: {
-          [ControlHeaders.DeadReason]: `Maximum attempts of ${limit} reached`,
-          [ControlHeaders.OriginalRoutingKey]: routingKey,
-          [ControlHeaders.AttemptCount]: totalAttempts,
+    if (totalAttempts <= limit) {
+      const expiration = this.getExpiration(totalAttempts);
+      await this.channel.sendToQueue(
+        this.exchange.queues.retry,
+        message.content,
+        {
+          expiration,
+          headers: {
+            [ControlHeaders.OriginalRoutingKey]: routingKey,
+            [ControlHeaders.AttemptCount]: totalAttempts + 1,
+          },
         },
-      });
-
+      );
       return;
     }
 
-    const expiration = this.getExpiration(totalAttempts);
-    await this.channel.sendToQueue(this.exchange.retry, message.content, {
-      expiration,
-      headers: {
-        [ControlHeaders.OriginalRoutingKey]: routingKey,
-        [ControlHeaders.AttemptCount]: totalAttempts + 1,
-      },
-    });
+    if (!this.isDeadHandler(message)) {
+      await this.channel.publish(
+        this.exchange.dlx,
+        `${routingKey}.dead`,
+        message.content,
+        {
+          headers: {
+            [ControlHeaders.DeadReason]: `Maximum attempts of ${limit} reached`,
+            [ControlHeaders.OriginalRoutingKey]: routingKey,
+            [ControlHeaders.AttemptCount]: totalAttempts,
+          },
+        },
+      );
+    }
   }
   //#endregion internals
 }

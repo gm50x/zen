@@ -51,4 +51,18 @@ export class ZenSubscriptionController {
       headers,
     });
   }
+
+  @Subscribe('#.dead', ZenConsumer)
+  async dead(
+    @Payload() data: any,
+    @Headers() headers: MessageHeaders,
+    @AttemptCount() attemptCount: number,
+  ) {
+    this.logger.log({
+      message: 'Dead message received #.dead',
+      data,
+      attemptCount,
+      headers,
+    });
+  }
 }
